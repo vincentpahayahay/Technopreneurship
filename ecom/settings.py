@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-6e9f25$f%vgr%^hs!n%*e3(p59dp4on#y3929_^b^e&$jrzien
 DEBUG = True
 
 ALLOWED_HOSTS = ['technopreneurship-production.up.railway.app', 'https://technopreneurship-production.up.railway.app']
-CSRF_TRUSTED_ORIGINS = ['technopreneurship-production.up.railway.app', 'https://technopreneurship-production.up.railway.app']
+CSRF_TRUSTED_ORIGINS = ['https://technopreneurship-production.up.railway.app']
 
 # Application definition
 
