@@ -117,7 +117,7 @@ def process_order(request):
             messages.success(request, "Order Placed...")
             return redirect('home')
         else:
-            create_order = Order(full_name=full_name, email=email, shipping_address=shipping_address, amount_paid=amount_paid)
+            create_order = Order(full_name=full_name, email=email, shipping_address=shipping_address, amount_paid=amount_paid, invoice=my_Invoice)
             create_order.save()
 
             order_id = create_order.pk
@@ -155,14 +155,23 @@ def billing_info(request):
         my_shipping = request.POST
         request.session['my_shipping'] = my_shipping
 
+        full_name = my_shipping['shipping_full_name']
+        email = my_shipping['shipping_email']
+        shipping_address = f"{my_shipping['shipping_address1']}\n{my_shipping['shipping_address2']}\n{my_shipping['shipping_city']}\n{my_shipping['shipping_barangay']}\n{my_shipping['shipping_zipcode']}\n{my_shipping['shipping_country']}"
+        amount_paid = totals
+
         host = request.get_host()
+
+        my_Invoice = str(uuid.uuid4())
+
+
 
         paypal_dict = {
             'business': settings.PAYPAL_RECEIVER_EMAIL,
             'amount': totals,
             'item_name': 'Order',
             'no_shipping': '2',
-            'invoice': str(uuid.uuid4()),
+            'invoice': my_Invoice,
             'currency_code': 'PHP',
             'notify_url': 'https://{}{}'.format(host, reverse("paypal-ipn")),
             'return_url': 'https://{}{}'.format(host, reverse("payment_success")),
@@ -174,14 +183,50 @@ def billing_info(request):
 
         if request.user.is_authenticated:
             billing_form = PaymentForm()
+            user = request.user
+            create_order = Order(user=user, full_name=full_name, email=email, shipping_address=shipping_address, amount_paid=amount_paid, invoice=my_Invoice)
+            create_order.save()
+
+            order_id = create_order.pk
+            for product in cart_products():
+                product_id = product.id
+                if product.is_sale:
+                    price = product.sale_price
+                else:
+                    price =product.price
+                
+                for key,value in quantities().items():
+                    if int(key) == product.id:
+                        create_order_item = OrderItem(order_id=order_id, product_id=product_id, user=user, quantity=value, price=price)
+                        create_order_item.save()
+
+
+            current_user = Profile.objects.filter(user__id=request.user.id)
+            current_user.update(old_cart="")
+
             return render(request, "payment/billing_info.html", {'paypal_form':paypal_form, 'cart_products':cart_products, 'categ': categ, 'quantities':quantities, 'totals':totals, 'shipping_info':request.POST, 'billing_form':billing_form })
 
         else:
+            create_order = Order(full_name=full_name, email=email, shipping_address=shipping_address, amount_paid=amount_paid, invoice=my_Invoice)
+            create_order.save()
+
+            order_id = create_order.pk
+            for product in cart_products():
+                product_id = product.id
+                if product.is_sale:
+                    price = product.sale_price
+                else:
+                    price =product.price
+                
+                for key,value in quantities().items():
+                    if int(key) == product.id:
+                        create_order_item = OrderItem(order_id=order_id, product_id=product_id, quantity=value, price=price)
+                        create_order_item.save()
+
             billing_form = PaymentForm()
             return render(request, "payment/billing_info.html", {'paypal_form':paypal_form, 'cart_products':cart_products, 'categ': categ, 'quantities':quantities, 'totals':totals, 'shipping_info':request.POST,'billing_form':billing_form })
 
-        shipping_form = request.POST
-        return render(request, "payment/billing_info.html", {'cart_products':cart_products, 'categ': categ, 'quantities':quantities, 'totals':totals, 'shipping_form':shipping_form })
+
     else:
         messages.success(request, "Access Denied...")
         return redirect('home')
