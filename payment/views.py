@@ -250,7 +250,14 @@ def checkout(request):
 
 
 def payment_success(request):
-
+    cart = Cart(request)
+    cart_products = cart.get_prods
+    categ = Category.objects.all()
+    quantities = cart.get_quants
+    totals = cart.cart_total()
+    for key in list(request.session.keys()):
+        if key == "session_key":
+            del request.session[key]    
     return render(request, "payment/payment_success.html", {})
 
 def payment_failed(request):
